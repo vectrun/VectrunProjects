@@ -1,0 +1,15 @@
+project @@id@@
+@@name@@
+@@long@@
+
+Copyright (C) 2013 Vectrun
+author: Vectrun (vectrun at gmail dot com)
+
+This script is free software under the GNU General Public License
+(>=v2).
+
+use the source, Luke.
+
+
+
+

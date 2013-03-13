@@ -1,0 +1,231 @@
+#!/usr/bin/python
+
+
+""" R proj class, prototype """
+
+import ConfigParser
+import sys
+import getopt
+import os
+import re
+
+
+def readconfig(configfile):
+    
+    config=ConfigParser.SafeConfigParser()
+    config.read(configfile)
+
+    return config
+
+def config2str(config):
+
+    sections=config.sections()
+    cfgstr=""
+
+    for sec in sections:
+        cfgstr=cfgstr+ "\n["+sec+"]\n"
+        options=config.options(sec)
+        for opt in options:
+            val=config.get(sec,opt)
+            cfgstr=cfgstr+ opt+ " = "+val+"\n"
+    return cfgstr
+
+#def printconfig(config):
+#    print(config2str(config))
+
+def readcomments(filename):
+
+    comments=""
+
+    f=open(filename,'r')
+    for line in f:
+        comments=comments+comment(line[:-1])+"\n"
+    f.close()
+    return comments
+
+def readheader(config):
+
+    headerdir=config.get("templates","templatedir")
+    headerfile=config.get("templates","header")
+    header=readcomments(headerdir+"/"+headerfile)
+    return header
+
+def hashline():
+
+    hashline="######################################################################\n"
+    return hashline
+
+def comment(s):
+
+    s="# "+s
+    return s
+
+def readtemplate(filename):
+    print "reading template: "+filename
+    f=open(filename,'r');
+    template=f.read(-1);
+    return template
+
+
+def copyscpt(config,template,tplname='',basedir=""):
+    
+    id=config.get("description","id")
+    name=config.get("description","name")
+    header=readheader(config)
+
+    print "template: "+tplname+"\n"
+    if tplname=='':
+        tplname=template
+    
+    out=hashline()
+    out=out+comment(name)+"\n"
+    out=out+hashline()
+    out=out+header
+    out=out+hashline()
+    tplfilename=config.get("templates",template)
+
+    out=out+readtemplate(config.get("templates","templatedir")+"/"+tplfilename)
+
+    p=re.compile(r'@@(.*?)@@')
+    res=p.findall(out)
+
+#TODO test if file exist, if false then error
+    for r in res:
+        #print "substituting "+r
+        out=re.sub("@@"+r+"@@",config.get("description",r),out)
+
+    
+    if basedir=='':
+        basedir=getdirname(config)
+
+    if template=="main":
+        filename=basedir+"/"+os.path.dirname(tplfilename)+"/"+id+".R"
+    elif template=="makefile":
+        filename=basedir+"/Makefile"
+    else:
+        filename=basedir+"/"+os.path.dirname(tplfilename)+"/"+id+"_"+tplname+".R"
+
+    print "writing :"+filename
+    f=open(filename,'w')
+    f.write(out)
+    f.close()
+
+
+def getdirname(config):
+    dirname=config.get("description","id");
+    return dirname
+
+def makedirs(config):
+
+    dirname=getdirname(config)
+    subdirs=config.get("subdirs","subdirs")
+    print "creating directory: "+dirname
+    os.mkdir("./"+dirname);
+    
+    for d in subdirs.split(','):
+        d=d.strip()
+        sub="./"+dirname+"/"+d
+        print "creating directory: "+sub
+        os.mkdir(sub)
+
+def writeconfig(config):
+    cfgstr=config2str(config)
+    filename=getdirname(config)+"/"+"project.conf"
+    f=open(filename,'w')
+    f.write(cfgstr)
+    f.close()
+
+
+
+def copytemplates(config):
+
+    options=config.options("templates")
+    for i in options:
+        if i=="templatedir" or i=="header":
+            continue
+        copyscpt(config,i)
+
+def usage():
+  print """Rproject: create new R project, add files
+
+
+Usage: Rproject [options]
+
+Options
+-c [filename] name of config file
+-b build project
+-p print config
+-n [file name] new file 
+-h show this help
+"""
+    
+def main (argv):
+    configfile=""
+    doPrint=0
+    doBuild=0
+    doNew=0
+    try:
+        opts,args=getopt.getopt(argv,"c:hpn:b",["config=","help","print","newfile=","build"])
+    except getopt.GetoptError:
+        usage()
+        sys.exit(2)
+    for opt,arg in opts:
+        if opt in ("-h", "--help"):
+            usage()
+            sys.exit()
+        elif opt in ("-c","--config"):
+            configfile=arg
+            if arg=="":
+                usage()
+                sys.exit()
+        elif opt in ("-b","--build"):
+            doBuild=1
+        elif opt in ("-n","--newfile"):
+            if arg=="":
+                usage()
+                sys.exit()
+            doNew=1
+            newfile=arg
+        elif opt in ("-p","--print"):
+            config=readconfig(configfile)
+            doPrint=1
+
+    if configfile=="":
+        configfile="project.conf"
+
+    if configfile=="project.conf":
+        doBuild=0
+
+    config=readconfig(configfile)
+
+    if doPrint:
+        print(config2str(config))
+
+    if doBuild & doNew:
+        print "can't do both\n"
+        usage()
+        sys.exit()
+
+    if doBuild:
+        print("building new project\n")
+        makedirs(config)
+        copytemplates(config)
+        writeconfig(config)
+
+    if doNew:
+       copyscpt(config,'proj',newfile,basedir="./")
+       id=config.get("description","id")
+       str=".PHONY: "+newfile+"\n"
+       str=str+newfile+": data/"+id+"_"+newfile+".rdat\n"
+       str=str+"data/"+id+"_"+newfile+".rdat: "+id+"_"+newfile+".R\n"
+       str=str+"\t($R) < "+id+"_"+newfile+".R"
+       str=str+"\n\n"
+       f=open("Makefile",'a')
+       f.write(str)
+       f.close()
+       sys.exit()
+
+
+if __name__ == "__main__":
+  main(sys.argv[1:])
+

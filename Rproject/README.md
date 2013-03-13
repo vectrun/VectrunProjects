@@ -1,7 +1,12 @@
-VectrunProjects
-===============
+VectrunProjects - Rproject
+==========================
 
-Collection of personal (pet) projects (.py, .R). 
+This python scripts creates a project directory, including a Makefile,
+for a R coding project. It is inspired by the ProjectTemplate package.
+but this script keeps things very simple.
+
+Please note, this code is sketchy and not documented.
+
 
 LICENCE and COPYRIGHT
 =====================
@@ -21,9 +26,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with VectrunProjects.  If not, 
 see <http://www.gnu.org/licenses/>.
-
-
-See Licence.txt for full licence.
 
 
 CONTACT Developper
