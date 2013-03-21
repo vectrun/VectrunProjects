@@ -1,0 +1,56 @@
+#######################################################
+# Vectrun Rprofile for interactive sessions
+#######################################################
+ 
+####################
+# functions
+####################
+
+StartElinks<-function (url) {
+	# starts elinks browser to display help pages
+
+	cat("starting browser\n")
+	cat("url: ",url,"\n")
+
+	options(browser="elinks -remote")
+	options(help_type="html")
+	invisible(url)
+	
+}
+
+####################
+# start
+####################
+
+cat ("Running local RProfile ... \n")
+
+# load libraries
+library(utils)
+
+# check if localoptions library is present, if so load lib, then load
+# options from file
+# see https://github.com/vectrun/localoptions
+if ( length(find.package("localoptions",quiet=TRUE))==1) {
+	library(localoptions)
+	readOptions("~/cfg/R.options")
+} else {
+	warning("Package localoptions not found")
+}
+
+# set some other options
+options( repos = c(CRAN = "http://cran.at.r-project.org/"))
+options(prompt=paste(basename(getwd()),"> "))
+
+
+# start browser if in interactive session
+if (interactive()) {
+	help.start(browser=StartElinks)
+}
+
+# give some info
+cat( R.Version()$version.string,"\n")
+cat("workdir is ",getwd(),"\n")
+cat("Local Rprofile done\n")
+
+
+

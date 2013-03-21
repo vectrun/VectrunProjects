@@ -1,0 +1,20 @@
+#!/bin/bash
+
+check() {
+    file="$1"
+    chsum1=`md5sum $file | awk '{print $1}'`
+    chsum2=$chsum1
+
+    while [ "$chsum1" ==  "$chsum2" ]
+    do
+        sleep 5
+        chsum2=`md5sum $file | awk '{print $1}'`
+    done
+
+    make
+}
+
+while true
+do
+	check $*
+done
