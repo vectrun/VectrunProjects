@@ -1,0 +1,55 @@
+#!/bin/bash 
+
+function convertpage {
+
+
+    convertopts="-background transparent -debug all"
+    f=$1
+    png=`echo $f|sed 's/\.pdf/.png/'`
+    link=`echo $f|sed 's/\.pdf//'`
+    gs -sDEVICE=pngalpha -sOutputFile=$png -r144 -q -dNOPAUSE -dBATCH $f
+    # convert $convertopts png:- $png
+    ln $png $link
+    cp $png $link $curdir
+
+}
+
+
+
+fname=$1
+
+
+tmpdir=`mktemp -d --tmpdir=/tmp`
+curdir=`pwd`
+
+fsuffix=`echo $fname |sed 's/^.*\.//'`
+fprefix=`basename $fname .$fsuffix`
+burstprefix="$fprefix""_%04d.pdf"
+
+echo fname= $fname,  prefix= $fprefix, suffix=$fsuffix
+echo burstprefix $burstprefix
+
+
+cp $fname $tmpdir/
+cd $tmpdir
+pagenum=`pdftk $fname dump_data | grep NumberOfPages | sed 's/.* //'`
+
+
+if [ $pagenum -gt 1 ]; then
+    pdftk $fname burst output $burstprefix
+
+    for f in `ls -1 $fprefix?[0-9]*.pdf`; do
+	convertpage $f
+    done
+else
+    convertpage $f
+fi
+
+
+
+#cd $curdir
+#cp $tmpdir/*.png .
+
+rm -rf $tmpdir
+
+
