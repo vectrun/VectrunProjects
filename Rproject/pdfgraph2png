@@ -1,14 +1,28 @@
-#!/bin/bash 
+#!/bin/bash
+
+# this function converts pdf files to png files, if the pdf contains
+# multiple pages then each page is written als file_0001.png
+# file_0002.png etc. Besides converting to png, this script also
+# creates a hard link to the png file (a file without extention) so
+# assist converting sweave files with pandoc.
+# png files are converted using imagemagick, so we can set background
+# and do some other trickery
 
 function convertpage {
+# this function does the actual converting, needs a filename as input
 
-
-    convertopts="-background transparent -debug all"
     f=$1
+
+	# set the convert-options for 'convert'
+    convertopts="-background transparent -debug all"
+
+	# get filename for png file and hard link
     png=`echo $f|sed 's/\.pdf/.png/'`
     link=`echo $f|sed 's/\.pdf//'`
+
+	# convert using gs and convert
     gs -sDEVICE=pngalpha -sOutputFile=$png -r144 -q -dNOPAUSE -dBATCH $f
-    # convert $convertopts png:- $png
+    convert $convertopts png:$png $png
     ln $png $link
     cp $png $link $curdir
 
@@ -16,12 +30,13 @@ function convertpage {
 
 
 
+
+# get the filename, create tmp dir
 fname=$1
-
-
 tmpdir=`mktemp -d --tmpdir=/tmp`
 curdir=`pwd`
 
+# get prefix/suffix (extention) of file
 fsuffix=`echo $fname |sed 's/^.*\.//'`
 fprefix=`basename $fname .$fsuffix`
 burstprefix="$fprefix""_%04d.pdf"
@@ -29,20 +44,25 @@ burstprefix="$fprefix""_%04d.pdf"
 echo fname= $fname,  prefix= $fprefix, suffix=$fsuffix
 echo burstprefix $burstprefix
 
-
+# copy stuf to tmpdir, change to tmpdir
 cp $fname $tmpdir/
 cd $tmpdir
+
+# get number of pages from pdf
 pagenum=`pdftk $fname dump_data | grep NumberOfPages | sed 's/.* //'`
+echo pages found: $pagenum
 
 
 if [ $pagenum -gt 1 ]; then
+	# we have more than 1 page, burst pdf to single pages ...
     pdftk $fname burst output $burstprefix
-
+	# ... and convert each page
     for f in `ls -1 $fprefix?[0-9]*.pdf`; do
 	convertpage $f
     done
 else
-    convertpage $f
+	# single page in pdf, convert immediatly
+    convertpage $fname
 fi
 
 
